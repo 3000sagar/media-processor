@@ -27,6 +27,16 @@ def get_s3_client(settings: Settings) -> Any:
     return boto3.client("s3", **kwargs)
 
 
+def get_presign_client(settings: Settings) -> Any:
+    if not settings.s3_public_endpoint_url:
+        return get_s3_client(settings)
+    return boto3.client(
+        "s3",
+        region_name=settings.aws_region,
+        endpoint_url=settings.s3_public_endpoint_url,
+    )
+
+
 def derive_object_key(owner_id: str, job_id: str, declared_filename: str, media_type: MediaType) -> str:
     """Server-side key derivation. The client's declared_filename is NEVER used in the path —
     only its extension is inspected, and only against an explicit allow-list. This is the fix
@@ -53,7 +63,7 @@ def generate_presigned_post(
     """Presigned POST (not PUT) so S3 itself enforces size and content-type — the enforcement
     the v1 plan claimed to have but didn't actually implement.
     """
-    client = get_s3_client(settings)
+    client = get_presign_client(settings)
     content_type_prefix = _CONTENT_TYPE_PREFIX[media_type]
     response = client.generate_presigned_post(
         Bucket=bucket,

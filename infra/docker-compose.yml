@@ -1,4 +1,28 @@
 services:
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:?set an S3 access key}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:?set an S3 secret key}
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio: { condition: service_healthy }
+    entrypoint: /bin/sh
+    command: -c "mc alias set local http://minio:9000 ${AWS_ACCESS_KEY_ID} ${AWS_SECRET_ACCESS_KEY} && mc mb --ignore-existing local/${S3_BUCKET_RAW} && mc mb --ignore-existing local/${S3_BUCKET_PROCESSED}"
+    networks: [internal]
+
   rabbitmq:
     image: rabbitmq:3.13-management
     environment:
@@ -26,9 +50,9 @@ services:
 
   api:
     build:
-      context: ../..
+      context: ..
       dockerfile: infra/docker/Dockerfile.api
-    env_file: ../../.env
+    env_file: ../.env
     environment:
       # Compose's own ${VAR} substitution (reading .env next to this file) is guaranteed;
       # env_file's literal pass-through of ${VAR} references inside .env is NOT — these
@@ -42,13 +66,14 @@ services:
     depends_on:
       rabbitmq: { condition: service_healthy }
       redis: { condition: service_healthy }
+      minio-init: { condition: service_completed_successfully }
     networks: [internal]
 
   worker:
     build:
-      context: ../..
+      context: ..
       dockerfile: infra/docker/Dockerfile.worker
-    env_file: ../../.env
+    env_file: ../.env
     environment:
       RABBITMQ_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672//
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
@@ -56,6 +81,7 @@ services:
     depends_on:
       rabbitmq: { condition: service_healthy }
       redis: { condition: service_healthy }
+      minio-init: { condition: service_completed_successfully }
     networks: [internal]
     deploy:
       replicas: 2

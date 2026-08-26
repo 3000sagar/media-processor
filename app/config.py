@@ -12,6 +12,7 @@ class Settings(BaseSettings):
     s3_bucket_processed: str = "media-processed"
     cloudfront_domain: str = ""
     s3_endpoint_url: str | None = None  # set for local/moto testing only
+    s3_public_endpoint_url: str | None = None  # browser/client endpoint for local S3
 
     # --- Broker / cache ---
     rabbitmq_url: str = "amqp://guest:guest@localhost:5672//"

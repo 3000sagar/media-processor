@@ -1,7 +1,10 @@
-from fastapi import Depends, Request
+from fastapi import Depends, Security
+from fastapi.security import APIKeyHeader
 
 from app.config import Settings, get_settings
 from app.errors import unauthorized
+
+api_key_scheme = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 def _parse_key_map(raw: str) -> dict[str, str]:
@@ -23,7 +26,7 @@ def _parse_key_map(raw: str) -> dict[str, str]:
 
 
 async def get_owner_id(
-    request: Request,
+    api_key: str | None = Security(api_key_scheme),
     settings: Settings = Depends(get_settings),
 ) -> str:
     """FastAPI dependency: validates the API key header and returns the caller's owner_id.
@@ -31,10 +34,8 @@ async def get_owner_id(
     Raise unauthorized() rather than returning None/"" on failure — callers must not be
     able to accidentally treat "no key" as "public owner" through a falsy-value bug.
     """
-    header_name = settings.api_key_header_name
-    api_key = request.headers.get(header_name)
     if not api_key:
-        raise unauthorized(f"Missing '{header_name}' header")
+        raise unauthorized(f"Missing '{settings.api_key_header_name}' header")
 
     key_map = _parse_key_map(settings.valid_api_keys)
     owner_id = key_map.get(api_key)
