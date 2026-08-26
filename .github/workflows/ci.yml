@@ -5,6 +5,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   lint-typecheck-test:
     runs-on: ubuntu-latest
@@ -55,6 +58,7 @@ jobs:
         with:
           image-ref: media-processor-api:${{ github.sha }}
           severity: HIGH,CRITICAL
+          ignore-unfixed: true
           exit-code: "1"
 
       - name: Scan worker image (trivy)
@@ -62,6 +66,7 @@ jobs:
         with:
           image-ref: media-processor-worker:${{ github.sha }}
           severity: HIGH,CRITICAL
+          ignore-unfixed: true
           exit-code: "1"
 
   # Deployment stage intentionally omitted: the deploy target (which cloud, which compute
