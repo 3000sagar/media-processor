@@ -14,7 +14,9 @@ WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip uninstall -y wheel
+RUN pip uninstall -y wheel || true \
+    && find /usr/local/lib/python3.11/site-packages -maxdepth 1 -iname 'wheel*' -exec rm -rf {} + \
+    && ! find /usr/local/lib/python3.11/site-packages -maxdepth 1 -iname 'wheel*' -print -quit | grep -q .
 
 COPY app/ ./app/
 
