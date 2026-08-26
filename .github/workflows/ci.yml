@@ -1,0 +1,70 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  lint-typecheck-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install system dependencies (ffmpeg, libmagic — needed for real pipeline tests)
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg libmagic1
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check app/
+
+      - name: Type check (mypy --strict)
+        run: mypy --strict app/
+
+      - name: Generate test video fixture
+        run: |
+          mkdir -p tests/fixtures
+          ffmpeg -y -f lavfi -i testsrc=duration=1:size=320x240:rate=5 -pix_fmt yuv420p tests/fixtures/sample.mp4
+
+      - name: Test with coverage floor
+        run: pytest tests/ --cov=app --cov-report=term-missing --cov-fail-under=85
+
+      - name: Dependency vulnerability audit
+        run: pip-audit -r requirements.txt
+
+  build-and-scan:
+    needs: lint-typecheck-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -f infra/docker/Dockerfile.api -t media-processor-api:${{ github.sha }} .
+
+      - name: Build worker image
+        run: docker build -f infra/docker/Dockerfile.worker -t media-processor-worker:${{ github.sha }} .
+
+      - name: Scan API image (trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: media-processor-api:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+      - name: Scan worker image (trivy)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: media-processor-worker:${{ github.sha }}
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+  # Deployment stage intentionally omitted: the deploy target (which cloud, which compute
+  # service, which registry) is a [HUMAN DECISION REQUIRED] item — see DECISIONS_NEEDED.md.
+  # Wire a `deploy` job here, gated on `if: startsWith(github.ref, 'refs/tags/')`, once
+  # that's answered.

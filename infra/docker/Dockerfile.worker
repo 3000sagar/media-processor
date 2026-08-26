@@ -1,0 +1,23 @@
+FROM python:3.11-slim
+
+RUN groupadd -r worker && useradd -r -g worker worker
+
+# ffmpeg is a system binary, not a pip package — ffmpeg-python only wraps it. Skipping
+# this line is the single most common way this exact stack fails silently in Docker
+# while "working on my machine" where ffmpeg happened to already be installed.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    libmagic1 \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app/ ./app/
+
+RUN chown -R worker:worker /app
+USER worker
+
+CMD ["celery", "-A", "app.celery_app", "worker", "--loglevel=info", "--concurrency=2"]

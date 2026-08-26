@@ -1,0 +1,21 @@
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "S"]
+# S101: assert is fine in tests, not relied on for prod control flow.
+# B008: FastAPI's Depends() lives in argument defaults by design — that's the framework's
+#       own dependency-injection pattern, not a real "mutable default" hazard.
+ignore = ["S101", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S105", "S106"]  # test fixtures use literal fake credentials/keys
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = ["venv/", "tests/"]
