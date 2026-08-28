@@ -101,11 +101,21 @@ def run_moderation_gate(redis_client: Redis[str], settings: Settings, job_id: st
     return False
 
 
-def mark_completed(redis_client: Redis[str], settings: Settings, job_id: str, result_url: str) -> None:
+def mark_completed(
+    redis_client: Redis[str],
+    settings: Settings,
+    job_id: str,
+    result_url: str,
+    processing_duration_seconds: float,
+) -> None:
     redis_service.update_job(
-        redis_client, job_id, settings.job_status_ttl_seconds,
-        status=JobStatus.COMPLETED, result_url=result_url,
+        redis_client,
+        job_id,
+        settings.job_status_ttl_seconds,
+        status=JobStatus.COMPLETED,
+        result_url=result_url,
         completed_at=datetime.now(UTC).isoformat(),
+        processing_duration_seconds=processing_duration_seconds,
     )
     jobs_completed_total.inc()
     logger.info("job_completed", job_id=job_id, result_url=result_url)

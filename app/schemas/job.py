@@ -70,7 +70,9 @@ class JobStatusResponse(BaseModel):
     result_url: str | None = None
     moderation_status: ModerationStatus | None = None
     created_at: str
+    started_at: str | None = None
     completed_at: str | None = None
+    processing_duration_seconds: float | None = None
     error: str | None = None
 
 
@@ -88,7 +90,9 @@ class JobRecord(BaseModel):
     result_url: str | None = None
     error: str | None = None
     created_at: str
+    started_at: str | None = None
     completed_at: str | None = None
+    processing_duration_seconds: float | None = None
 
     def to_status_response(self) -> JobStatusResponse:
         return JobStatusResponse(
@@ -98,7 +102,9 @@ class JobRecord(BaseModel):
             result_url=self.result_url,
             moderation_status=self.moderation_status,
             created_at=self.created_at,
+            started_at=self.started_at,
             completed_at=self.completed_at,
+            processing_duration_seconds=self.processing_duration_seconds,
             error=self.error,
         )
 
