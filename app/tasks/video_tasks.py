@@ -1,5 +1,6 @@
 import os
 import time
+from datetime import UTC, datetime
 from typing import Any
 
 from app.celery_app import celery_app
@@ -38,7 +39,16 @@ def process_video(self: Any, job_id: str) -> None:
 
     try:
         with job_lock(redis_client, job_id, settings.job_lock_ttl_seconds):
-            redis_service.update_job(redis_client, job_id, settings.job_status_ttl_seconds, status=JobStatus.PROCESSING)
+            started_at = datetime.now(UTC).isoformat()
+
+            redis_service.update_job(
+                redis_client,
+                job_id,
+                settings.job_status_ttl_seconds,
+                status=JobStatus.PROCESSING,
+                started_at=started_at,
+            )
+
             start = time.monotonic()
 
             with scratch_dir() as workdir:
@@ -98,9 +108,19 @@ def process_video(self: Any, job_id: str) -> None:
                     f"https://{settings.cloudfront_domain}/{processed_key}"
                     if settings.cloudfront_domain else processed_key
                 )
-                mark_completed(redis_client, settings, job_id, result_url)
+                processing_duration = time.monotonic() - start
 
-            task_processing_duration_seconds.labels(media_type="video").observe(time.monotonic() - start)
+                mark_completed(
+                    redis_client,
+                    settings,
+                    job_id,
+                    result_url,
+                    processing_duration,
+                )
+
+        task_processing_duration_seconds.labels(
+            media_type="video"
+        ).observe(processing_duration)
 
     except TaskAborted:
         return
