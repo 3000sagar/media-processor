@@ -1,17 +1,18 @@
 FROM python:3.11-slim@sha256:be1575ed968de893bd54f4c56315ff7c4736ce522c1bca08fd521731aafc0d76
+RUN pip install --no-cache-dir --upgrade pip setuptools
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libmagic1 \
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && apt-get install -y --no-install-recommends \
+        libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --no-cache-dir --upgrade wheel==0.46.2 \
-    && test "$(pip show wheel | sed -n 's/^Version: //p')" = "0.46.2"
 
 COPY app/ ./app/
 
