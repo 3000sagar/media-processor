@@ -1,0 +1,14 @@
+vulnerabilities:
+  # These records are retained in historical layers of the official Python base image.
+  # They are not present in the final image filesystem; CI verifies the active packages
+  # before this ignore file is applied. Reassess after the base image is refreshed again.
+  - id: GHSA-6v7p-g79w-8964
+    purls:
+      - pkg:pypi/msgpack@1.1.2
+    statement: Historical base-image layer only; msgpack is absent from the final runtime image.
+    expired_at: 2026-10-05
+  - id: CVE-2025-47273
+    purls:
+      - pkg:pypi/setuptools@70.3.0
+    statement: Historical base-image layer only; final runtime image has setuptools >= 78.1.1.
+    expired_at: 2026-10-05

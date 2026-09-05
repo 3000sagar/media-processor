@@ -54,6 +54,23 @@ jobs:
       - name: Build worker image
         run: docker build -f infra/docker/Dockerfile.worker -t media-processor-worker:${{ github.sha }} .
 
+      - name: Verify active Python packages in runtime images
+        run: |
+          for image in media-processor-api:${{ github.sha }} media-processor-worker:${{ github.sha }}; do
+            docker run -i --rm --entrypoint python "$image" - <<'PY'
+          from importlib.metadata import PackageNotFoundError, version
+
+          def parsed_version(package: str) -> tuple[int, ...]:
+              return tuple(int(part) for part in version(package).split(".") if part.isdigit())
+
+          assert parsed_version("setuptools") >= (78, 1, 1)
+          try:
+              assert parsed_version("msgpack") >= (1, 2, 1)
+          except PackageNotFoundError:
+              pass
+          PY
+          done
+
       - name: Scan API image (trivy)
         uses: aquasecurity/trivy-action@master
         with:
@@ -61,6 +78,7 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
+          trivyignores: .trivyignore.yaml
 
       - name: Scan worker image (trivy)
         uses: aquasecurity/trivy-action@master
@@ -69,6 +87,7 @@ jobs:
           severity: HIGH,CRITICAL
           ignore-unfixed: true
           exit-code: "1"
+          trivyignores: .trivyignore.yaml
 
   # Deployment stage intentionally omitted: the deploy target (which cloud, which compute
   # service, which registry) is a [HUMAN DECISION REQUIRED] item — see DECISIONS_NEEDED.md.
