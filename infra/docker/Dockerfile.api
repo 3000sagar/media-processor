@@ -1,4 +1,4 @@
-FROM python:3.11-slim@sha256:be1575ed968de893bd54f4c56315ff7c4736ce522c1bca08fd521731aafc0d76
+FROM python:3.11-slim@sha256:9534e5a8e315485d4061ed659af0fd78a284c015f9b73661b41d6bab25604534
 RUN pip install --no-cache-dir --upgrade pip setuptools
 
 RUN groupadd -r appuser && useradd -r -g appuser appuser
