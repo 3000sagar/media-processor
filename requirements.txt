@@ -13,3 +13,4 @@ gunicorn==23.0.0
 python-magic==0.4.27
 slowapi==0.1.9
 structlog==24.4.0
+setuptools>=78.1.1

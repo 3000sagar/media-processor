@@ -9,3 +9,4 @@ mypy==1.11.2
 pip-audit==2.7.3
 types-redis==4.6.0.20240819
 fakeredis==2.23.5
+setuptools>=78.1.1
